@@ -381,22 +381,24 @@ module ActiveRecord
         end
 
         def _raw_select(sql, options = {})
-          handle = raw_connection_run(sql)
-          handle_to_names_and_values(handle, options)
-        ensure
-          finish_statement_handle(handle)
-        end
+          with_sqlserver_error_handling do
+            begin
+	      handle = raw_connection_run(sql)
+              handle_to_names_and_values(handle, options)
+            ensure
+              finish_statement_handle(handle)
+            end
+	  end
+	end
 
         def raw_connection_run(sql)
-          with_sqlserver_error_handling do
-            case @connection_options[:mode]
-            when :dblib
-              @connection.execute(sql)
-            when :odbc
-              block_given? ? @connection.run_block(sql) { |handle| yield(handle) } : @connection.run(sql)
-            end
+          case @connection_options[:mode]
+          when :dblib
+            @connection.execute(sql)
+          when :odbc
+            block_given? ? @connection.run_block(sql) { |handle| yield(handle) } : @connection.run(sql)
           end
-        end
+	end
 
         def handle_more_results?(handle)
           case @connection_options[:mode]
